@@ -202,7 +202,7 @@
 
   (_search (lambda (state term)
     (begin
-      (remove-from-input (+ (length (state :acc)) (length (state :prompt)) 100))
+      (remove-from-input (+ (length (state :acc)) (length (state :prompt))))
       (display (++ "(reverse-i-search)`" term "': ") :flush)
       (let* ((matches (filter (lambda (item) (in? item term)) history))
              (best (get-from matches 0 ""))
@@ -243,7 +243,7 @@
 
   (clean-prompt (lambda (state)
     (begin
-      (remove-from-input (+ (length (state :acc)) (length (state :prompt)) 100))
+      (remove-from-input (+ (length (state :acc)) (length (state :prompt))))
       (display (state :prompt) :flush)
       (if -highlight
         (display (zhighlight (list->string (state :acc))) :flush)
