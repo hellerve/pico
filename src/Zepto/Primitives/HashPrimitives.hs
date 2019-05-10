@@ -1,7 +1,7 @@
 module Zepto.Primitives.HashPrimitives where
 
 import Control.Monad.Except
-import Data.Map (keys, elems, member, delete, fromList, toList)
+import Data.HashMap (keys, elems, member, delete, fromList, toList)
 
 import Zepto.Types
 

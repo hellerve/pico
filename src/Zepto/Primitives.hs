@@ -11,7 +11,7 @@ import Control.Monad.Except
 import System.Directory
 import System.IO
 import System.IO.Error (tryIOError)
-import qualified Data.Map
+import qualified Data.HashMap as DM
 import qualified Control.Exception as CE
 import qualified Data.ByteString as BS (hPut, cons, splitAt, append, tail, index)
 
@@ -562,15 +562,15 @@ eval env conti (List [ByteVector x, SimpleVal (Atom a)]) = do
         i <- getVar env a
         eval env conti (List [ByteVector x, i])
 eval _ _ (List [ByteVector _, x]) = throwError $ TypeMismatch "integer" x
-eval _ _ (List [HashMap x, SimpleVal i@(Atom (':' : _))]) = if Data.Map.member i x
-        then return $ x Data.Map.! i
+eval _ _ (List [HashMap x, SimpleVal i@(Atom (':' : _))]) = if DM.member i x
+        then return $ x DM.! i
         else return $ fromSimple $ Nil ""
 eval env conti (List [HashMap x, SimpleVal (Atom a)]) = do
         i <- getVar env a
         eval env conti (List [HashMap x, i])
 eval _ _ (List [HashMap x, SimpleVal i]) =
-        if Data.Map.member i x
-          then return $ x Data.Map.! i
+        if DM.member i x
+          then return $ x DM.! i
           else return $ fromSimple $ Nil ""
 eval env conti (List [HashMap x, form]) = do
         i <- eval env conti form
@@ -580,9 +580,9 @@ eval env conti (HashComprehension (keyexpr, valexpr) (SimpleVal (Atom key), Simp
         case hash of
           HashMap e -> do
             keys <- mapM (filterAndApply key keyexpr cond env conti . fromSimple)
-                     (Data.Map.keys e)
-            vals <- mapM (internalApply val valexpr env conti) (Data.Map.elems e)
-            return $ HashMap $ Data.Map.fromList $ buildTuples (map toSimple keys) vals []
+                     (DM.keys e)
+            vals <- mapM (internalApply val valexpr env conti) (DM.elems e)
+            return $ HashMap $ DM.fromList $ buildTuples (map toSimple keys) vals []
           _ -> throwError $ TypeMismatch "hash-map" hash
     where buildTuples :: [Simple] -> [LispVal] -> [(Simple, LispVal)] -> [(Simple, LispVal)]
           buildTuples [] [] l = l
@@ -595,9 +595,9 @@ eval env conti (HashComprehension (keyexpr, valexpr) (SimpleVal (Atom key), Simp
         case hash of
           HashMap e -> do
             keys <- mapM (filterAndApply key keyexpr cond env conti . fromSimple)
-                     (Data.Map.keys e)
-            vals <- mapM (internalApply val valexpr env conti) (Data.Map.elems e)
-            return $ HashMap $ Data.Map.fromList $ buildTuples (map toSimple keys) vals []
+                     (DM.keys e)
+            vals <- mapM (internalApply val valexpr env conti) (DM.elems e)
+            return $ HashMap $ DM.fromList $ buildTuples (map toSimple keys) vals []
           _ -> throwError $ TypeMismatch "hash-map" hash
     where buildTuples :: [Simple] -> [LispVal] -> [(Simple, LispVal)] -> [(Simple, LispVal)]
           buildTuples [] [] l = l

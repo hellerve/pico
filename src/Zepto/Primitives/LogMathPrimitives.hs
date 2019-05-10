@@ -6,7 +6,7 @@ import Data.Char
 import Data.Complex
 import Data.Word (Word32)
 
-import qualified Data.Map as DM (toList)
+import qualified Data.HashMap as DM (toList)
 import qualified Data.Ratio as Ratio (numerator, denominator)
 import qualified Text.Regex.PCRE.Light.Base as R
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass, DeriveGeneric #-}
 module Zepto.Types (LispNum(..),
                     Simple(..),
                     LispVal(..),
@@ -40,6 +41,7 @@ import Data.ByteString (ByteString, unpack)
 import Data.Complex
 import Data.Dynamic
 import Data.Fixed
+import Data.Hashable
 import Data.IORef
 import Data.List (foldl')
 import Data.Ratio
@@ -47,7 +49,8 @@ import Control.Monad
 import Control.Monad.Except
 import System.IO
 import Text.ParserCombinators.Parsec.Error
-import qualified Data.Map as M
+import qualified GHC.Generics
+import qualified Data.HashMap as M
 import qualified Data.Array as A
 import qualified Text.Regex.PCRE.Light.Base as R
 
@@ -300,6 +303,15 @@ data LispNum = NumI Integer
              | NumC (Complex Double)
              | NumR Rational
              | NumS Int
+    deriving (Hashable, GHC.Generics.Generic)
+
+instance Hashable a => Hashable (Complex a) where
+  hash d = hash (realPart d) + hash (imagPart d)
+  hashWithSalt x d = hashWithSalt x (realPart d) + hashWithSalt x (imagPart d)
+
+instance Hashable R.Regex where
+  hash (R.Regex _ r)= hash r
+  hashWithSalt x (R.Regex _ r)= hashWithSalt x r
 
 data Simple = Atom String
             | Number LispNum
@@ -309,7 +321,7 @@ data Simple = Atom String
             | Bool Bool
             | Nil String
             | SimpleList [Simple]
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Hashable, GHC.Generics.Generic)
 
 instance Show LispVal where show = showVal
 -- | a LispVal data type comprising all Lisp data types

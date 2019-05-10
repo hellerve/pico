@@ -12,7 +12,7 @@ import Data.Word (Word8)
 import Numeric
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Text.Regex.PCRE.Heavy (compileM)
-import qualified Data.Map
+import qualified Data.HashMap as DM
 import qualified Data.ByteString.Char8 as C (pack)
 
 import Zepto.Types
@@ -311,7 +311,7 @@ parseHashMap = do vals <- many parseExprPair
                     Right m ->
                       case duplicate (map fst m) of
                         Just d  ->  fail $ "Duplicate key: " ++ show d
-                        Nothing -> return $ HashMap $ Data.Map.fromList m
+                        Nothing -> return $ HashMap $ DM.fromList m
                     Left x  -> fail $ "All values must be simple (offending clause: " ++ show x ++ ")"
     where construct :: [(Simple, LispVal)] -> [[LispVal]] -> Either LispVal [(Simple, LispVal)]
           construct acc [] = Right acc

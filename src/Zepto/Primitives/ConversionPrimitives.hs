@@ -6,7 +6,7 @@ import Data.ByteString.Lazy (toStrict, fromStrict)
 import Data.Char (ord, chr)
 import Data.Complex (realPart, imagPart)
 import Data.IORef (readIORef)
-import Data.Map (empty, foldrWithKey, insert)
+import Data.HashMap (empty, foldWithKey, insert)
 import qualified Data.ByteString.Lazy as BSL (concat)
 
 import Zepto.Types
@@ -23,7 +23,7 @@ env2HashMapDoc = "converts an environment to a hashmap.\n\
 env2HashMap :: LispVal -> IOThrowsError LispVal
 env2HashMap (Environ x) = do
         env <- liftIO $ allBindings x
-        hashmap <- liftIO $ foldrWithKey accum (evaluate empty) env
+        hashmap <- liftIO $ foldWithKey accum (evaluate empty) env
         return $ HashMap hashmap
     where accum k v acc = do
             nv <- readIORef v

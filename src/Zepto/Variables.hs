@@ -1,7 +1,7 @@
 module Zepto.Variables where
 import Control.Monad.Except
 import Data.IORef
-import qualified Data.Map
+import qualified Data.HashMap as DM
 
 import Zepto.Types
 
@@ -21,20 +21,20 @@ mnamespace = 'm'
 vnamespace :: Char
 vnamespace = 'v'
 
-allBindings :: Env -> IO (Data.Map.Map String (IORef LispVal))
+allBindings :: Env -> IO (DM.Map String (IORef LispVal))
 allBindings (Environment Nothing b _) = readIORef b
 allBindings (Environment (Just parent) b _) = do
         x <- readIORef b
         y <- allBindings parent
-        return $ Data.Map.union x y
+        return $ DM.union x y
 
 copyEnv :: Env -> IO Env
 copyEnv env = do
         ptrs <- liftIO $ readIORef $ pointers env
         ptrList <- newIORef ptrs
         binds <- liftIO $ readIORef $ bindings env
-        bindingListT <- mapM addBind $ Data.Map.toList binds
-        bindingList <- newIORef $ Data.Map.fromList bindingListT
+        bindingListT <- mapM addBind $ DM.toList binds
+        bindingList <- newIORef $ DM.fromList bindingListT
         return $ Environment (parentEnv env) bindingList ptrList
     where addBind (name, val) =
             liftIO (readIORef val)
@@ -45,8 +45,8 @@ copyEnv env = do
 extendEnv :: Env -> [((Char, String), LispVal)] -> IO Env
 extendEnv envRef abindings = do
         bindinglistT <- mapM addBind abindings
-        bindinglist <- newIORef $ Data.Map.fromList bindinglistT
-        nullPointers <- newIORef $ Data.Map.fromList []
+        bindinglist <- newIORef $ DM.fromList bindinglistT
+        nullPointers <- newIORef $ DM.fromList []
         return $ Environment (Just envRef) bindinglist nullPointers
     where addBind ((namespace, name), val) = do
                 ref <- newIORef val
@@ -64,7 +64,7 @@ recExportsFromEnv env = do
 exportsFromEnv :: Env -> IO [LispVal]
 exportsFromEnv env = do
         binds <- liftIO $ readIORef $ bindings env
-        return $ getExports [] $ fst $ unzip $ Data.Map.toList binds
+        return $ getExports [] $ fst $ unzip $ DM.toList binds
     where
         getExports acc (('m':'_':b) : bs) = getExports (SimpleVal (Atom b):acc) bs
         getExports acc (('v':'_':b) : bs) = getExports (SimpleVal (Atom b):acc) bs
@@ -79,7 +79,7 @@ isBound envRef = isNamespaceBound envRef vnamespace
 isNamespaceBound :: Env -> Char -> String -> IO Bool
 isNamespaceBound envRef prfx var = do
         binds <- liftIO $ readIORef $ bindings envRef
-        if Data.Map.member (getVarName prfx var) binds
+        if DM.member (getVarName prfx var) binds
           then return True
           else
             case parentEnv envRef of
@@ -108,7 +108,7 @@ getNamespacedVar' envRef namespace var = getNamespacedObj' envRef namespace var 
 getNamespacedObj' :: Env -> Char -> String -> (IORef LispVal -> IO a) -> IOThrowsError (Maybe a)
 getNamespacedObj' envRef namespace var unpackFun = do
         binds <- liftIO $ readIORef $ bindings envRef
-        case Data.Map.lookup (getVarName namespace var) binds of
+        case DM.lookup (getVarName namespace var) binds of
             Just a -> do
                 v <- liftIO $ unpackFun a
                 return $ Just v
@@ -142,7 +142,7 @@ setNamespacedVar' envRef namespace var value = do
 setNamespacedVarDirect :: Env -> Char -> String -> LispVal -> IOThrowsError LispVal
 setNamespacedVarDirect envRef namespace var valueToStore = do
         env <- liftIO $ readIORef $ bindings envRef
-        case Data.Map.lookup (getVarName namespace var) env of
+        case DM.lookup (getVarName namespace var) env of
             Just a -> do
                 liftIO $ writeIORef a valueToStore
                 return valueToStore
@@ -153,7 +153,7 @@ setNamespacedVarDirect envRef namespace var valueToStore = do
 updatePointers :: Env -> Char -> String -> IOThrowsError LispVal
 updatePointers envRef namespace var = do
   ptrs <- liftIO $ readIORef $ pointers envRef
-  case Data.Map.lookup (getVarName namespace var) ptrs of
+  case DM.lookup (getVarName namespace var) ptrs of
     Just valIORef -> do
       val <- liftIO $ readIORef valIORef
       case val of
@@ -171,14 +171,14 @@ updatePointers envRef namespace var = do
   movePointers :: Env -> Char -> String -> [LispVal] -> IOThrowsError LispVal
   movePointers envRef' namespace' var' ptrs = do
     env <- liftIO $ readIORef $ pointers envRef'
-    case Data.Map.lookup (getVarName namespace' var') env of
+    case DM.lookup (getVarName namespace' var') env of
       Just ps' -> do
         ps <- liftIO $ readIORef ps'
         liftIO $ writeIORef ps' $ ps ++ ptrs
         return $ SimpleVal $ Nil ""
       Nothing -> do
         valueRef <- liftIO $ newIORef ptrs
-        liftIO $ writeIORef (pointers envRef') (Data.Map.insert (getVarName namespace var') valueRef env)
+        liftIO $ writeIORef (pointers envRef') (DM.insert (getVarName namespace var') valueRef env)
         return $ SimpleVal $ Nil ""
   pointToNewVar pEnv namespace' pVar' (Pointer v e : ps) = do
     _ <- setNamespacedVarDirect e namespace' v (Pointer pVar' pEnv)
@@ -197,7 +197,7 @@ defineNamespacedVar envRef namespace var value = do
                 liftIO $ do
                     valueRef <- newIORef valueToStore
                     env <- readIORef $ bindings envRef
-                    writeIORef (bindings envRef) (Data.Map.insert (getVarName namespace var) valueRef env)
+                    writeIORef (bindings envRef) (DM.insert (getVarName namespace var) valueRef env)
                     return valueToStore
 
 getValueToStore :: Char -> String -> Env -> LispVal -> IOThrowsError LispVal
@@ -207,20 +207,20 @@ getValueToStore _ _ _ v = return v
 addReversePointer :: Char -> String -> Env -> Char -> String -> Env -> IOThrowsError LispVal
 addReversePointer namespace var envRef ptrNamespace ptrVar ptrEnvRef = do
     env <- liftIO $ readIORef $ bindings envRef
-    case Data.Map.lookup (getVarName namespace var) env of
+    case DM.lookup (getVarName namespace var) env of
         Just a -> do
             v <- liftIO $ readIORef a
             if isObject v
                 then do
                     ptrs <- liftIO $ readIORef $ pointers envRef
-                    case Data.Map.lookup (getVarName namespace var) ptrs of
+                    case DM.lookup (getVarName namespace var) ptrs of
                         Just valueRef -> liftIO $ do
                             value <- readIORef valueRef
                             writeIORef valueRef (value ++ [Pointer ptrVar ptrEnvRef])
                             return $ Pointer var envRef
                         Nothing -> liftIO $ do
                             valueRef <- newIORef [Pointer ptrVar ptrEnvRef]
-                            writeIORef (pointers envRef) (Data.Map.insert (getVarName namespace var) valueRef ptrs)
+                            writeIORef (pointers envRef) (DM.insert (getVarName namespace var) valueRef ptrs)
                             return $ Pointer var envRef
                 else return v
         Nothing -> case parentEnv envRef of

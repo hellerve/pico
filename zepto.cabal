@@ -77,6 +77,8 @@ Executable           zepto
                      ghc,
                      ghc-prim,
                      ghc-paths,
+                     hashable,
+                     hashmap,
                      MissingH,
                      mtl >= 2.2.1,
                      network,
